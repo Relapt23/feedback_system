@@ -5,6 +5,8 @@ import os
 
 
 api_key = os.getenv("API_KEY")
+if not api_key:
+    raise RuntimeError("API_KEY environment variable is not set")
 url = "https://api.apilayer.com/sentiment/analysis"
 
 
