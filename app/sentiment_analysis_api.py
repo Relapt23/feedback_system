@@ -11,7 +11,7 @@ async def analyze_sentiment(text: str) -> str:
 
     url = "https://api.apilayer.com/sentiment/analysis"
     headers = {"apikey": api_key}
-    payload = {"body": text}
+    payload = text
 
     async with AsyncClient() as client:
         try:
