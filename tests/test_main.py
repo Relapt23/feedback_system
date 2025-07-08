@@ -53,23 +53,25 @@ async def test_send_feedback_success(client, monkeypatch, test_session):
     monkeypatch.setattr(app.endpoints, "analyze_sentiment", mock_analyze_sentiment)
 
     response = await client.post("/feedback", json={"text": "Nice service"})
+    data = response.json()
+
+    db_feedback = (
+        await test_session.execute(
+            select(FeedbackInfo).where(FeedbackInfo.id == data["id"])
+        )
+    ).scalar_one()
 
     # then
     assert response.status_code == 200
-    data = response.json()
     assert isinstance(data["id"], int)
     assert data["status"] == "open"
     assert data["sentiment"] == "positive"
     assert data["category"] == "другое"
 
-    query = await test_session.execute(
-        select(FeedbackInfo).where(FeedbackInfo.id == data["id"])
-    )
-    db_request_success = query.scalar_one()
-    assert db_request_success.text == "Nice service"
-    assert db_request_success.status == "open"
-    assert db_request_success.sentiment == "positive"
-    assert db_request_success.category == "другое"
+    assert db_feedback.text == "Nice service"
+    assert db_feedback.status == "open"
+    assert db_feedback.sentiment == "positive"
+    assert db_feedback.category == "другое"
 
 
 @pytest.mark.asyncio
@@ -81,20 +83,22 @@ async def test_send_feedback_api_error(client, monkeypatch, test_session):
     # when
     monkeypatch.setattr(app.endpoints, "analyze_sentiment", mock_analyze_sentiment)
     response = await client.post("/feedback", json={"text": "kwckwkcwekc"})
+    data = response.json()
+
+    db_feedback = (
+        await test_session.execute(
+            select(FeedbackInfo).where(FeedbackInfo.id == data["id"])
+        )
+    ).scalar_one()
 
     # then
     assert response.status_code == 200
-    data = response.json()
     assert isinstance(data["id"], int)
     assert data["sentiment"] == "unknown"
     assert data["status"] == "open"
     assert data["category"] == "другое"
 
-    query = await test_session.execute(
-        select(FeedbackInfo).where(FeedbackInfo.id == data["id"])
-    )
-    db_request_success = query.scalar_one()
-    assert db_request_success.text == "kwckwkcwekc"
-    assert db_request_success.status == "open"
-    assert db_request_success.sentiment == "unknown"
-    assert db_request_success.category == "другое"
+    assert db_feedback.text == "kwckwkcwekc"
+    assert db_feedback.status == "open"
+    assert db_feedback.sentiment == "unknown"
+    assert db_feedback.category == "другое"
