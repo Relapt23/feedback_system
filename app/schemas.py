@@ -1,10 +1,11 @@
 from pydantic import BaseModel
 
 
-class Feedback(BaseModel):
+class FeedbackRequest(BaseModel):
     text: str
 
-class FeedbackAnswer(BaseModel):
+
+class FeedbackResponse(BaseModel):
     id: int
     status: str
     sentiment: str | None = None
