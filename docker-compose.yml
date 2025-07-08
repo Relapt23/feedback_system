@@ -1,0 +1,16 @@
+
+services:
+  app:
+    build: .
+    container_name: feedback_app
+    volumes:
+      - ./:/app
+      - db_data:/db/database
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+
+
+volumes:
+  db_data:
