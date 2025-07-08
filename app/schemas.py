@@ -8,5 +8,5 @@ class FeedbackRequest(BaseModel):
 class FeedbackResponse(BaseModel):
     id: int
     status: str
-    sentiment: str | None = None
+    sentiment: str
     category: str
