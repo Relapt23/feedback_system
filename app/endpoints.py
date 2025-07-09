@@ -1,18 +1,24 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from app.schemas import FeedbackRequest, FeedbackResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.db_config import make_session
 from db.models import FeedbackInfo
 from datetime import datetime
 from app.sentiment_analysis_api import analyze_sentiment
+from app.geo_ip_api import get_geolocation
 
 router = APIRouter()
 
 
 @router.post("/feedback")
 async def send_feedback(
-    feedback: FeedbackRequest, session: AsyncSession = Depends(make_session)
+    feedback: FeedbackRequest,
+    request: Request,
+    session: AsyncSession = Depends(make_session),
 ) -> FeedbackResponse:
+    client_ip = request.client.host
+    geo = await get_geolocation(client_ip)
+
     try:
         sentiment = await analyze_sentiment(feedback.text)
     except HTTPException:
@@ -24,6 +30,12 @@ async def send_feedback(
         timestamp=datetime.now().timestamp(),
         sentiment=sentiment,
         category="другое",
+        ip=client_ip,
+        country=geo["country"],
+        region=geo["region"],
+        city=geo["city"],
+        latitude=geo["latitude"],
+        longitude=geo["longitude"],
     )
     session.add(feedback_info)
     await session.commit()
@@ -34,4 +46,10 @@ async def send_feedback(
         status=feedback_info.status,
         sentiment=feedback_info.sentiment,
         category=feedback_info.category,
+        ip=feedback_info.ip,
+        country=feedback_info.country,
+        region=feedback_info.region,
+        city=feedback_info.city,
+        latitude=feedback_info.latitude,
+        longitude=feedback_info.longitude,
     )
