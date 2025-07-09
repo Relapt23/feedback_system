@@ -31,11 +31,11 @@ async def send_feedback(
         sentiment=sentiment,
         category="другое",
         ip=client_ip,
-        country=geo["country"],
-        region=geo["region"],
-        city=geo["city"],
-        latitude=geo["latitude"],
-        longitude=geo["longitude"],
+        country=geo.country,
+        region=geo.region,
+        city=geo.city,
+        latitude=geo.latitude,
+        longitude=geo.longitude,
     )
     session.add(feedback_info)
     await session.commit()
