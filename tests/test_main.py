@@ -8,6 +8,7 @@ from main import app as fastapi_app
 from httpx import AsyncClient, ASGITransport
 import app.endpoints
 from fastapi import HTTPException
+from app.schemas import GeoLocationResponse
 
 
 @pytest_asyncio.fixture()
@@ -46,14 +47,14 @@ async def client(test_session):
 @pytest.mark.asyncio
 async def test_send_feedback_success(client, monkeypatch, test_session):
     # given
-    async def mock_get_geolocation(ip: str) -> dict:
-        return {
-            "country": "Canada",
-            "region": "QC",
-            "city": "Montreal",
-            "latitude": 45.6026,
-            "longitude": -73.5167,
-        }
+    async def mock_get_geolocation(ip: str) -> GeoLocationResponse:
+        return GeoLocationResponse(
+            country="Canada",
+            region="QC",
+            city="Montreal",
+            latitude=45.6026,
+            longitude=-73.5167,
+        )
 
     async def mock_analyze_sentiment(text: str) -> str:
         return "positive"
@@ -99,14 +100,14 @@ async def test_send_feedback_success(client, monkeypatch, test_session):
 @pytest.mark.asyncio
 async def test_send_feedback_api_error(client, monkeypatch, test_session):
     # given
-    async def mock_get_geolocation(ip: str) -> dict:
-        return {
-            "country": None,
-            "region": None,
-            "city": None,
-            "latitude": None,
-            "longitude": None,
-        }
+    async def mock_get_geolocation(ip: str) -> GeoLocationResponse:
+        return GeoLocationResponse(
+            country=None,
+            region=None,
+            city=None,
+            latitude=None,
+            longitude=None,
+        )
 
     async def mock_analyze_sentiment(text: str) -> str:
         raise HTTPException(status_code=502, detail="Sentiment API error")
