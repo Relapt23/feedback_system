@@ -46,10 +46,20 @@ async def client(test_session):
 @pytest.mark.asyncio
 async def test_send_feedback_success(client, monkeypatch, test_session):
     # given
+    async def mock_get_geolocation(ip: str) -> dict:
+        return {
+            "country": "Canada",
+            "region": "QC",
+            "city": "Montreal",
+            "latitude": 45.6026,
+            "longitude": -73.5167,
+        }
+
     async def mock_analyze_sentiment(text: str) -> str:
         return "positive"
 
     # when
+    monkeypatch.setattr(app.endpoints, "get_geolocation", mock_get_geolocation)
     monkeypatch.setattr(app.endpoints, "analyze_sentiment", mock_analyze_sentiment)
 
     response = await client.post("/feedback", json={"text": "Nice service"})
@@ -67,20 +77,42 @@ async def test_send_feedback_success(client, monkeypatch, test_session):
     assert data["status"] == "open"
     assert data["sentiment"] == "positive"
     assert data["category"] == "другое"
+    assert isinstance(data["ip"], str)
+    assert data["country"] == "Canada"
+    assert data["region"] == "QC"
+    assert data["city"] == "Montreal"
+    assert data["latitude"] == 45.6026
+    assert data["longitude"] == -73.5167
 
     assert db_feedback.text == "Nice service"
     assert db_feedback.status == "open"
     assert db_feedback.sentiment == "positive"
     assert db_feedback.category == "другое"
+    assert db_feedback.ip == data["ip"]
+    assert db_feedback.country == "Canada"
+    assert db_feedback.region == "QC"
+    assert db_feedback.city == "Montreal"
+    assert db_feedback.latitude == 45.6026
+    assert db_feedback.longitude == -73.5167
 
 
 @pytest.mark.asyncio
 async def test_send_feedback_api_error(client, monkeypatch, test_session):
     # given
+    async def mock_get_geolocation(ip: str) -> dict:
+        return {
+            "country": None,
+            "region": None,
+            "city": None,
+            "latitude": None,
+            "longitude": None,
+        }
+
     async def mock_analyze_sentiment(text: str) -> str:
         raise HTTPException(status_code=502, detail="Sentiment API error")
 
     # when
+    monkeypatch.setattr(app.endpoints, "get_geolocation", mock_get_geolocation)
     monkeypatch.setattr(app.endpoints, "analyze_sentiment", mock_analyze_sentiment)
     response = await client.post("/feedback", json={"text": "kwckwkcwekc"})
     data = response.json()
@@ -97,8 +129,20 @@ async def test_send_feedback_api_error(client, monkeypatch, test_session):
     assert data["sentiment"] == "unknown"
     assert data["status"] == "open"
     assert data["category"] == "другое"
+    assert isinstance(data["ip"], str)
+    assert data["country"] is None
+    assert data["region"] is None
+    assert data["city"] is None
+    assert data["latitude"] is None
+    assert data["longitude"] is None
 
     assert db_feedback.text == "kwckwkcwekc"
     assert db_feedback.status == "open"
     assert db_feedback.sentiment == "unknown"
     assert db_feedback.category == "другое"
+    assert db_feedback.ip == data["ip"]
+    assert db_feedback.country is None
+    assert db_feedback.region is None
+    assert db_feedback.city is None
+    assert db_feedback.latitude is None
+    assert db_feedback.longitude is None

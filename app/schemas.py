@@ -10,3 +10,18 @@ class FeedbackResponse(BaseModel):
     status: str
     sentiment: str
     category: str
+    ip: str | None = None
+    country: str | None = None
+    region: str | None = None
+    city: str | None = None
+    latitude: float | None = None
+    longitude: float | None = None
+
+
+class GeoLocationResponse(BaseModel):
+    ip: str | None = None
+    country: str | None = None
+    region: str | None = None
+    city: str | None = None
+    latitude: float | None = None
+    longitude: float | None = None

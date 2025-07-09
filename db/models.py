@@ -13,3 +13,9 @@ class FeedbackInfo(Base):
     timestamp: Mapped[int]
     sentiment: Mapped[str]
     category: Mapped[str]
+    ip: Mapped[str] = mapped_column(nullable=True)
+    country: Mapped[str] = mapped_column(nullable=True)
+    region: Mapped[str] = mapped_column(nullable=True)
+    city: Mapped[str] = mapped_column(nullable=True)
+    latitude: Mapped[float] = mapped_column(nullable=True)
+    longitude: Mapped[float] = mapped_column(nullable=True)
