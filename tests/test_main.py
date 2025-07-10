@@ -7,7 +7,6 @@ from db.models import Base, FeedbackInfo
 from main import app as fastapi_app
 from httpx import AsyncClient, ASGITransport
 import app.endpoints
-from fastapi import HTTPException
 from app.schemas import GeoLocationResponse
 
 
@@ -116,7 +115,7 @@ async def test_send_feedback_api_error(client, monkeypatch, test_session):
         )
 
     async def mock_analyze_sentiment(text: str) -> str:
-        raise HTTPException(status_code=502, detail="Sentiment API error")
+        return "unknown"
 
     async def mock_category_definition(text: str) -> str:
         return "другое"

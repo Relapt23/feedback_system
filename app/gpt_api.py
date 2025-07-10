@@ -1,11 +1,11 @@
 import os
-from openai import OpenAI, OpenAIError
+from openai import OpenAI
 
 
 async def category_definition(text: str) -> str:
     API_KEY = os.getenv("API_GPT_KEY")
     if not API_KEY:
-        raise RuntimeError("OPENAI_API_KEY is not set")
+        raise RuntimeError("API_GPT_KEY is not set")
 
     client = OpenAI(api_key=API_KEY, base_url=os.getenv("GPT_URL"))
     sys_prompt = (
@@ -21,6 +21,6 @@ async def category_definition(text: str) -> str:
             temperature=0.0,
         )
         category = response.choices[0].message.content.strip().lower()
-    except OpenAIError:
+    except Exception:
         category = "другое"
     return category

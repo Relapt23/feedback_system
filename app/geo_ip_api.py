@@ -1,4 +1,4 @@
-from httpx import AsyncClient, Timeout, RequestError
+from httpx import AsyncClient, Timeout
 from app.schemas import GeoLocationResponse
 
 
@@ -16,7 +16,7 @@ async def get_geolocation(ip: str) -> GeoLocationResponse:
             response = await client.get(
                 url=url, timeout=Timeout(Timeout(15.0, connect=5.0))
             )
-        except RequestError:
+        except Exception:
             return DEFAULT_GEO
     data = response.json()
     if data["status"] != "success":
