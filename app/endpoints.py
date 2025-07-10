@@ -21,12 +21,11 @@ async def send_feedback(
 ) -> FeedbackResponse:
     client_ip = request.client.host
 
-    geo_task = get_geolocation(client_ip)
-    sentiment_task = analyze_sentiment(feedback.text)
-    category_task = category_definition(feedback.text)
-
     geo, sentiment, category = await asyncio.gather(
-        geo_task, sentiment_task, category_task, return_exceptions=False
+        get_geolocation(client_ip),
+        analyze_sentiment(feedback.text),
+        category_definition(feedback.text),
+        return_exceptions=False,
     )
 
     feedback_info = FeedbackInfo(
