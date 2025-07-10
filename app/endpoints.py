@@ -25,12 +25,14 @@ async def send_feedback(
     except HTTPException:
         sentiment = "unknown"
 
+    category = await category_definition(feedback.text)
+
     feedback_info = FeedbackInfo(
         text=feedback.text,
         status="open",
         timestamp=datetime.now().timestamp(),
         sentiment=sentiment,
-        category="другое",
+        category=category,
         ip=client_ip,
         country=geo.country,
         region=geo.region,
@@ -39,11 +41,6 @@ async def send_feedback(
         longitude=geo.longitude,
     )
     session.add(feedback_info)
-    await session.commit()
-    await session.refresh(feedback_info)
-
-    category = await category_definition(feedback_info.text)
-    feedback_info.category = category
     await session.commit()
     await session.refresh(feedback_info)
 
