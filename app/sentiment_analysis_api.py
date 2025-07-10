@@ -25,4 +25,4 @@ async def analyze_sentiment(text: str) -> str:
             raise HTTPException(detail="Sentiment API error", status_code=502)
 
     data = response.json()
-    return data.get("sentiment")
+    return data.get("sentiment") or "unknown"

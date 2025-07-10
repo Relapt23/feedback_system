@@ -6,6 +6,7 @@ from db.models import FeedbackInfo
 from datetime import datetime
 from app.sentiment_analysis_api import analyze_sentiment
 from app.geo_ip_api import get_geolocation
+from app.gpt_api import category_definition
 
 router = APIRouter()
 
@@ -38,6 +39,11 @@ async def send_feedback(
         longitude=geo.longitude,
     )
     session.add(feedback_info)
+    await session.commit()
+    await session.refresh(feedback_info)
+
+    category = await category_definition(feedback_info.text)
+    feedback_info.category = category
     await session.commit()
     await session.refresh(feedback_info)
 
