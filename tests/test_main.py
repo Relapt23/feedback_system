@@ -7,7 +7,7 @@ from db.models import Base, FeedbackInfo
 from main import app as fastapi_app
 from httpx import AsyncClient, ASGITransport
 import app.endpoints
-from fastapi import HTTPException
+from app.schemas import GeoLocationResponse
 
 
 @pytest_asyncio.fixture()
@@ -46,23 +46,29 @@ async def client(test_session):
 @pytest.mark.asyncio
 async def test_send_feedback_success(client, monkeypatch, test_session):
     # given
-    async def mock_get_geolocation(ip: str) -> dict:
-        return {
-            "country": "Canada",
-            "region": "QC",
-            "city": "Montreal",
-            "latitude": 45.6026,
-            "longitude": -73.5167,
-        }
+    async def mock_get_geolocation(ip: str) -> GeoLocationResponse:
+        return GeoLocationResponse(
+            country="Canada",
+            region="QC",
+            city="Montreal",
+            latitude=45.6026,
+            longitude=-73.5167,
+        )
 
     async def mock_analyze_sentiment(text: str) -> str:
         return "positive"
 
+    async def mock_category_definition(text: str) -> str:
+        return "оплата"
+
     # when
     monkeypatch.setattr(app.endpoints, "get_geolocation", mock_get_geolocation)
     monkeypatch.setattr(app.endpoints, "analyze_sentiment", mock_analyze_sentiment)
+    monkeypatch.setattr(app.endpoints, "category_definition", mock_category_definition)
 
-    response = await client.post("/feedback", json={"text": "Nice service"})
+    response = await client.post(
+        "/feedback", json={"text": "Excellent service for making payments"}
+    )
     data = response.json()
 
     db_feedback = (
@@ -76,7 +82,7 @@ async def test_send_feedback_success(client, monkeypatch, test_session):
     assert isinstance(data["id"], int)
     assert data["status"] == "open"
     assert data["sentiment"] == "positive"
-    assert data["category"] == "другое"
+    assert data["category"] == "оплата"
     assert isinstance(data["ip"], str)
     assert data["country"] == "Canada"
     assert data["region"] == "QC"
@@ -84,10 +90,10 @@ async def test_send_feedback_success(client, monkeypatch, test_session):
     assert data["latitude"] == 45.6026
     assert data["longitude"] == -73.5167
 
-    assert db_feedback.text == "Nice service"
+    assert db_feedback.text == "Excellent service for making payments"
     assert db_feedback.status == "open"
     assert db_feedback.sentiment == "positive"
-    assert db_feedback.category == "другое"
+    assert db_feedback.category == "оплата"
     assert db_feedback.ip == data["ip"]
     assert db_feedback.country == "Canada"
     assert db_feedback.region == "QC"
@@ -99,21 +105,26 @@ async def test_send_feedback_success(client, monkeypatch, test_session):
 @pytest.mark.asyncio
 async def test_send_feedback_api_error(client, monkeypatch, test_session):
     # given
-    async def mock_get_geolocation(ip: str) -> dict:
-        return {
-            "country": None,
-            "region": None,
-            "city": None,
-            "latitude": None,
-            "longitude": None,
-        }
+    async def mock_get_geolocation(ip: str) -> GeoLocationResponse:
+        return GeoLocationResponse(
+            country=None,
+            region=None,
+            city=None,
+            latitude=None,
+            longitude=None,
+        )
 
     async def mock_analyze_sentiment(text: str) -> str:
-        raise HTTPException(status_code=502, detail="Sentiment API error")
+        return "unknown"
+
+    async def mock_category_definition(text: str) -> str:
+        return "другое"
 
     # when
     monkeypatch.setattr(app.endpoints, "get_geolocation", mock_get_geolocation)
     monkeypatch.setattr(app.endpoints, "analyze_sentiment", mock_analyze_sentiment)
+    monkeypatch.setattr(app.endpoints, "category_definition", mock_category_definition)
+
     response = await client.post("/feedback", json={"text": "kwckwkcwekc"})
     data = response.json()
 

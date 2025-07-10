@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+import asyncio
+
+from fastapi import APIRouter, Depends, Request
 from app.schemas import FeedbackRequest, FeedbackResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.db_config import make_session
@@ -6,6 +8,7 @@ from db.models import FeedbackInfo
 from datetime import datetime
 from app.sentiment_analysis_api import analyze_sentiment
 from app.geo_ip_api import get_geolocation
+from app.gpt_api import category_definition
 
 router = APIRouter()
 
@@ -17,19 +20,20 @@ async def send_feedback(
     session: AsyncSession = Depends(make_session),
 ) -> FeedbackResponse:
     client_ip = request.client.host
-    geo = await get_geolocation(client_ip)
 
-    try:
-        sentiment = await analyze_sentiment(feedback.text)
-    except HTTPException:
-        sentiment = "unknown"
+    geo, sentiment, category = await asyncio.gather(
+        get_geolocation(client_ip),
+        analyze_sentiment(feedback.text),
+        category_definition(feedback.text),
+        return_exceptions=False,
+    )
 
     feedback_info = FeedbackInfo(
         text=feedback.text,
         status="open",
         timestamp=datetime.now().timestamp(),
         sentiment=sentiment,
-        category="другое",
+        category=category,
         ip=client_ip,
         country=geo.country,
         region=geo.region,

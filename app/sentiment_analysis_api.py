@@ -1,5 +1,4 @@
-from fastapi import HTTPException
-from httpx import AsyncClient, Timeout, RequestError
+from httpx import AsyncClient, Timeout
 
 import os
 
@@ -19,10 +18,9 @@ async def analyze_sentiment(text: str) -> str:
                 url=url,
                 json=payload,
                 headers=headers,
-                timeout=Timeout(15.0, connect=5.0),
+                timeout=Timeout(10.0, connect=5.0),
             )
-        except RequestError:
-            raise HTTPException(detail="Sentiment API error", status_code=502)
-
-    data = response.json()
-    return data.get("sentiment")
+        except Exception:
+            return "unknown"
+        data = response.json()
+        return data.get("sentiment")

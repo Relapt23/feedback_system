@@ -6,3 +6,4 @@ aiosqlite
 greenlet
 httpx
 python-dotenv
+openai
