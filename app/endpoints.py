@@ -1,7 +1,7 @@
 import asyncio
 
-from fastapi import APIRouter, Depends, Request
-from app.schemas import FeedbackRequest, FeedbackResponse
+from fastapi import APIRouter, Depends, Request, HTTPException
+from app.schemas import FeedbackRequest, FeedbackResponse, FeedbackOut
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.db_config import make_session
 from db.models import FeedbackInfo
@@ -9,6 +9,8 @@ from datetime import datetime
 from app.sentiment_analysis_api import analyze_sentiment
 from app.geo_ip_api import get_geolocation
 from app.gpt_api import category_definition
+from typing import List
+from sqlalchemy import select, update
 
 router = APIRouter()
 
@@ -56,4 +58,76 @@ async def send_feedback(
         city=feedback_info.city,
         latitude=feedback_info.latitude,
         longitude=feedback_info.longitude,
+    )
+
+
+@router.get(
+    "/feedback",
+    summary="List feedbacks",
+    description="Return feedbacks filtered by status and min timestamp",
+)
+async def get_feedbacks(
+    status: str | None = None,
+    timestamp: int | None = None,
+    session: AsyncSession = Depends(make_session),
+) -> List[FeedbackOut]:
+    query = select(FeedbackInfo)
+    if status is not None:
+        query = query.where(FeedbackInfo.status == status)
+    if timestamp is not None:
+        query = query.where(FeedbackInfo.timestamp >= timestamp)
+
+    feedbacks = (await session.execute(query)).scalars().all()
+
+    return [
+        FeedbackOut(
+            id=f.id,
+            text=f.text,
+            status=f.status,
+            sentiment=f.sentiment,
+            category=f.category,
+            ip=f.ip,
+            country=f.country,
+            region=f.region,
+            city=f.city,
+            latitude=f.latitude,
+            longitude=f.longitude,
+        )
+        for f in feedbacks
+    ]
+
+
+@router.post("/feedback/close/{feedback_id}")
+async def close_feedback(
+    feedback_id: int,
+    session: AsyncSession = Depends(make_session),
+) -> FeedbackResponse:
+    feedback = (
+        await session.execute(
+            select(FeedbackInfo).where(FeedbackInfo.id == feedback_id)
+        )
+    ).scalar_one_or_none()
+    if not feedback:
+        raise HTTPException(status_code=404, detail="not_found")
+
+    await session.execute(
+        update(FeedbackInfo)
+        .where(FeedbackInfo.id == feedback_id)
+        .values(status="closed")
+    )
+
+    await session.commit()
+    await session.refresh(feedback)
+
+    return FeedbackResponse(
+        id=feedback.id,
+        status=feedback.status,
+        sentiment=feedback.sentiment,
+        category=feedback.category,
+        ip=feedback.ip,
+        country=feedback.country,
+        region=feedback.region,
+        city=feedback.city,
+        latitude=feedback.latitude,
+        longitude=feedback.longitude,
     )

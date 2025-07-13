@@ -3,7 +3,7 @@ from app.schemas import GeoLocationResponse
 
 
 async def get_geolocation(ip: str) -> GeoLocationResponse:
-    url = "http://ip-api.com/json/{ip}"
+    url = f"http://ip-api.com/json/{ip}"
     DEFAULT_GEO = GeoLocationResponse(
         country=None,
         region=None,
