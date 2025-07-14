@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class FeedbackRequest(BaseModel):
@@ -17,6 +17,8 @@ class FeedbackResponse(BaseModel):
     latitude: float | None = None
     longitude: float | None = None
 
+    model_config = ConfigDict(from_attributes=True)
+
 
 class GeoLocationResponse(BaseModel):
     ip: str | None = None
@@ -27,7 +29,7 @@ class GeoLocationResponse(BaseModel):
     longitude: float | None = None
 
 
-class FeedbackOut(BaseModel):
+class FeedbackFullInfo(BaseModel):
     id: int
     text: str
     status: str
@@ -39,3 +41,5 @@ class FeedbackOut(BaseModel):
     city: str | None = None
     latitude: float | None = None
     longitude: float | None = None
+
+    model_config = ConfigDict(from_attributes=True)

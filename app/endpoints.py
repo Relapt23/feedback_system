@@ -1,7 +1,7 @@
 import asyncio
 
 from fastapi import APIRouter, Depends, Request, HTTPException
-from app.schemas import FeedbackRequest, FeedbackResponse, FeedbackOut
+from app.schemas import FeedbackRequest, FeedbackResponse, FeedbackFullInfo
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.db_config import make_session
 from db.models import FeedbackInfo
@@ -47,18 +47,7 @@ async def send_feedback(
     await session.commit()
     await session.refresh(feedback_info)
 
-    return FeedbackResponse(
-        id=feedback_info.id,
-        status=feedback_info.status,
-        sentiment=feedback_info.sentiment,
-        category=feedback_info.category,
-        ip=feedback_info.ip,
-        country=feedback_info.country,
-        region=feedback_info.region,
-        city=feedback_info.city,
-        latitude=feedback_info.latitude,
-        longitude=feedback_info.longitude,
-    )
+    return FeedbackResponse.model_validate(feedback_info)
 
 
 @router.get(
@@ -70,7 +59,7 @@ async def get_feedbacks(
     status: str | None = None,
     timestamp: int | None = None,
     session: AsyncSession = Depends(make_session),
-) -> List[FeedbackOut]:
+) -> List[FeedbackFullInfo]:
     query = select(FeedbackInfo)
     if status is not None:
         query = query.where(FeedbackInfo.status == status)
@@ -79,22 +68,7 @@ async def get_feedbacks(
 
     feedbacks = (await session.execute(query)).scalars().all()
 
-    return [
-        FeedbackOut(
-            id=f.id,
-            text=f.text,
-            status=f.status,
-            sentiment=f.sentiment,
-            category=f.category,
-            ip=f.ip,
-            country=f.country,
-            region=f.region,
-            city=f.city,
-            latitude=f.latitude,
-            longitude=f.longitude,
-        )
-        for f in feedbacks
-    ]
+    return [FeedbackFullInfo.model_validate(f) for f in feedbacks]
 
 
 @router.post("/feedback/close/{feedback_id}")
@@ -116,4 +90,4 @@ async def close_feedback(
 
     await session.commit()
 
-    return feedback
+    return FeedbackResponse.model_validate(feedback)
