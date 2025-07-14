@@ -102,32 +102,18 @@ async def close_feedback(
     feedback_id: int,
     session: AsyncSession = Depends(make_session),
 ) -> FeedbackResponse:
-    feedback = (
-        await session.execute(
-            select(FeedbackInfo).where(FeedbackInfo.id == feedback_id)
-        )
-    ).scalar_one_or_none()
-    if not feedback:
-        raise HTTPException(status_code=404, detail="not_found")
-
-    await session.execute(
+    update_feedback = (
         update(FeedbackInfo)
         .where(FeedbackInfo.id == feedback_id)
         .values(status="closed")
+        .returning(FeedbackInfo)
     )
+
+    feedback = (await session.scalars(update_feedback)).one_or_none()
+
+    if feedback is None:
+        raise HTTPException(detail="not_found", status_code=404)
 
     await session.commit()
-    await session.refresh(feedback)
 
-    return FeedbackResponse(
-        id=feedback.id,
-        status=feedback.status,
-        sentiment=feedback.sentiment,
-        category=feedback.category,
-        ip=feedback.ip,
-        country=feedback.country,
-        region=feedback.region,
-        city=feedback.city,
-        latitude=feedback.latitude,
-        longitude=feedback.longitude,
-    )
+    return feedback
