@@ -8,6 +8,7 @@ from main import app as fastapi_app
 from httpx import AsyncClient, ASGITransport
 import app.endpoints
 from app.schemas import GeoLocationResponse
+from datetime import datetime
 
 
 @pytest_asyncio.fixture()
@@ -157,3 +158,102 @@ async def test_send_feedback_api_error(client, monkeypatch, test_session):
     assert db_feedback.city is None
     assert db_feedback.latitude is None
     assert db_feedback.longitude is None
+
+
+@pytest.mark.asyncio
+async def test_get_feedback_success(client, test_session):
+    # given
+    now = int(datetime.now().timestamp())
+    old_ts = now - 3600
+    test_session.add_all(
+        [
+            FeedbackInfo(
+                text="A",
+                status="open",
+                timestamp=old_ts,
+                sentiment="positive",
+                category="техническая",
+                ip="1.1.1.1",
+                country="X",
+                region="Y",
+                city="Z",
+                latitude=0.0,
+                longitude=0.0,
+            ),
+            FeedbackInfo(
+                text="B",
+                status="open",
+                timestamp=now,
+                sentiment="negative",
+                category="оплата",
+                ip="1.1.1.2",
+                country="X",
+                region="Y",
+                city="Z",
+                latitude=0.0,
+                longitude=0.0,
+            ),
+            FeedbackInfo(
+                text="C",
+                status="closed",
+                timestamp=now,
+                sentiment="negative",
+                category="другое",
+                ip="1.1.1.3",
+                country="X",
+                region="Y",
+                city="Z",
+                latitude=0.0,
+                longitude=0.0,
+            ),
+        ]
+    )
+    await test_session.commit()
+
+    # when
+    response = await client.get(f"/feedback?status=open&timestamp={now}")
+
+    # then
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 1
+    assert data[0]["text"] == "B"
+
+
+@pytest.mark.asyncio
+async def test_feedback_closed(client, test_session):
+    # given
+    feedback = FeedbackInfo(
+        text="B",
+        status="open",
+        timestamp=int(datetime.now().timestamp()),
+        sentiment="negative",
+        category="оплата",
+        ip="1.1.1.2",
+        country="X",
+        region="Y",
+        city="Z",
+        latitude=0.0,
+        longitude=0.0,
+    )
+    test_session.add(feedback)
+
+    await test_session.commit()
+    await test_session.refresh(feedback)
+
+    # when
+    response = await client.post(f"/feedback/close/{feedback.id}")
+    data = response.json()
+    await test_session.refresh(feedback)
+
+    db_feedback = (
+        await test_session.execute(
+            select(FeedbackInfo).where(FeedbackInfo.id == feedback.id)
+        )
+    ).scalar_one()
+
+    # then
+    assert response.status_code == 200
+    assert data["id"] == feedback.id
+    assert data["status"] == "closed"
+    assert db_feedback.status == "closed"
