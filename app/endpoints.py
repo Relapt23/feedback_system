@@ -1,7 +1,7 @@
 import asyncio
 
 from fastapi import APIRouter, Depends, Request, HTTPException
-from app.schemas import FeedbackRequest, FeedbackResponse, FeedbackFullInfo
+from app.schemas import FeedbackRequest, FeedbackResponse, FeedbackFullInfoResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.db_config import make_session
 from db.models import FeedbackInfo
@@ -59,7 +59,7 @@ async def get_feedbacks(
     status: str | None = None,
     timestamp: int | None = None,
     session: AsyncSession = Depends(make_session),
-) -> List[FeedbackFullInfo]:
+) -> List[FeedbackFullInfoResponse]:
     query = select(FeedbackInfo)
     if status is not None:
         query = query.where(FeedbackInfo.status == status)
@@ -68,7 +68,7 @@ async def get_feedbacks(
 
     feedbacks = (await session.execute(query)).scalars().all()
 
-    return [FeedbackFullInfo.model_validate(f) for f in feedbacks]
+    return [FeedbackFullInfoResponse.model_validate(f) for f in feedbacks]
 
 
 @router.post("/feedback/close/{feedback_id}")

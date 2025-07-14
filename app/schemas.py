@@ -29,7 +29,7 @@ class GeoLocationResponse(BaseModel):
     longitude: float | None = None
 
 
-class FeedbackFullInfo(BaseModel):
+class FeedbackFullInfoResponse(BaseModel):
     id: int
     text: str
     status: str
